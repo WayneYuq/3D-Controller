@@ -8,6 +8,8 @@
 #include "BaseController.h"
 #include "Math/Mat3x3F.h"
 
+#include <iostream>
+
 #ifdef __PX4_NUTTX
 #include <systemlib/param/param.h>
 #endif
@@ -79,6 +81,10 @@ VehicleCommand QuadControl::GenerateMotorCommands(float collThrustCmd, V3F momen
   float thrust_3 = (r_bar - p_bar) / 2.f + thrust_4;
   float thrust_2 = (c_bar - p_bar) / 2.f - thrust_3;
   float thrust_1 = c_bar - thrust_2 - thrust_3 - thrust_4;
+  thrust_1 = min(max(thrust_1, minMotorThrust), maxMotorThrust);
+  thrust_2 = min(max(thrust_2, minMotorThrust), maxMotorThrust);
+  thrust_3 = min(max(thrust_3, minMotorThrust), maxMotorThrust);
+  thrust_4 = min(max(thrust_4, minMotorThrust), maxMotorThrust);
   
   cmd.desiredThrustsN[0] = thrust_1; // front left
   cmd.desiredThrustsN[1] = thrust_2; // front right
@@ -139,8 +145,22 @@ V3F QuadControl::RollPitchControl(V3F accelCmd, Quaternion<float> attitude, floa
   Mat3x3F R = attitude.RotationMatrix_IwrtB();
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
+  float c_d = collThrustCmd / mass;
+  if (collThrustCmd > 0.f)
+    {
+      float target_R13 = -min(max(accelCmd.x / c_d, -maxTiltAngle), maxTiltAngle);
+      float target_R23 = -min(max(accelCmd.y / c_d, -maxTiltAngle), maxTiltAngle);
+      pqrCmd.x = (1 / R(2, 2)) * (R(1, 0) * kpBank * (target_R13 - R(0, 2)) -
+				  R(0, 0) * kpBank * (target_R23 - R(1, 2)));
 
-
+      pqrCmd.y = (1 / R(2, 2)) * (R(1, 1) * kpBank * (target_R13 - R(0, 2)) -
+				  R(0, 1) * kpBank * (target_R23 - R(1, 2)));
+    }
+  else
+    {
+      std::cout << "Negative thrust command!\n";
+    }
+  
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
