@@ -71,25 +71,22 @@ VehicleCommand QuadControl::GenerateMotorCommands(float collThrustCmd, V3F momen
   // You'll need the arm length parameter L, and the drag/thrust ratio kappa
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
-  
-  float c_bar = -collThrustCmd;
-  float p_bar = momentCmd.x / L;
-  float q_bar = momentCmd.y / L;
-  float r_bar = momentCmd.z / kappa;
 
-  float thrust_4 = (c_bar + p_bar - r_bar - q_bar) / 4.f;
-  float thrust_3 = (r_bar - p_bar) / 2.f + thrust_4;
-  float thrust_2 = (c_bar - p_bar) / 2.f - thrust_3;
-  float thrust_1 = c_bar - thrust_2 - thrust_3 - thrust_4;
-  thrust_1 = min(max(thrust_1, minMotorThrust), maxMotorThrust);
-  thrust_2 = min(max(thrust_2, minMotorThrust), maxMotorThrust);
-  thrust_3 = min(max(thrust_3, minMotorThrust), maxMotorThrust);
-  thrust_4 = min(max(thrust_4, minMotorThrust), maxMotorThrust);
+  float l = L / sqrtf(2.f);
+  float c_total = collThrustCmd;
+  float p_moment = momentCmd.x / l;
+  float q_moment = momentCmd.y / l;
+  float r_moment = - momentCmd.z / kappa;
   
-  cmd.desiredThrustsN[0] = thrust_1; // front left
-  cmd.desiredThrustsN[1] = thrust_2; // front right
-  cmd.desiredThrustsN[2] = thrust_3; // rear left
-  cmd.desiredThrustsN[3] = thrust_4; // rear right
+  float thrust_1 = (c_total + p_moment + q_moment + r_moment) / 4.f;
+  float thrust_2 = (c_total - p_moment + q_moment - r_moment) / 4.f;
+  float thrust_4 = (c_total - p_moment - q_moment + r_moment) / 4.f;
+  float thrust_3 = (c_total + p_moment - q_moment - r_moment) / 4.f;
+  
+  cmd.desiredThrustsN[0] = thrust_1; // front left  f1
+  cmd.desiredThrustsN[1] = thrust_2; // front right f2
+  cmd.desiredThrustsN[2] = thrust_3; // rear left   f4
+  cmd.desiredThrustsN[3] = thrust_4; // rear right  f3
 
   
   /////////////////////////////// END STUDENT CODE ////////////////////////////
@@ -114,8 +111,12 @@ V3F QuadControl::BodyRateControl(V3F pqrCmd, V3F pqr)
   V3F momentCmd;
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
-  V3F u_bar = kpPQR * (pqrCmd - pqr);
-  momentCmd = V3F(Ixx, Iyy, Izz) * u_bar;
+  // V3F u_bar = kpPQR * (pqrCmd - pqr);
+  V3F I;
+  I.x = Ixx;
+  I.y = Iyy;
+  I.z = Izz;
+  momentCmd = I * kpPQR * (pqrCmd - pqr);
   
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
@@ -145,23 +146,26 @@ V3F QuadControl::RollPitchControl(V3F accelCmd, Quaternion<float> attitude, floa
   Mat3x3F R = attitude.RotationMatrix_IwrtB();
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
-  float c_d = collThrustCmd / mass;
-  if (collThrustCmd > 0.f)
+
+  if (collThrustCmd > 0)
     {
+      float c_d = -collThrustCmd / mass;
+         
       float target_R13 = -min(max(accelCmd.x / c_d, -maxTiltAngle), maxTiltAngle);
       float target_R23 = -min(max(accelCmd.y / c_d, -maxTiltAngle), maxTiltAngle);
       pqrCmd.x = (1 / R(2, 2)) * (R(1, 0) * kpBank * (target_R13 - R(0, 2)) -
-				  R(0, 0) * kpBank * (target_R23 - R(1, 2)));
+      				  R(0, 0) * kpBank * (target_R23 - R(1, 2)));
 
       pqrCmd.y = (1 / R(2, 2)) * (R(1, 1) * kpBank * (target_R13 - R(0, 2)) -
 				  R(0, 1) * kpBank * (target_R23 - R(1, 2)));
     }
   else
     {
-      std::cout << "Negative thrust command!\n";
+      pqrCmd.x = 0.0;
+      pqrCmd.y = 0.0;
     }
   
-
+  pqrCmd.z = 0;
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
   return pqrCmd;
