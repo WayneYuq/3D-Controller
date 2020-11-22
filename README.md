@@ -174,18 +174,6 @@ To accomplish this, you will:
 
  - implement the code in the function `GenerateMotorCommands()`
  - implement the code in the function `BodyRateControl()`
- - Tune `kpPQR` in `QuadControlParams.txt` to get the vehicle to stop spinning quickly but not overshoot
- - In `GenerateMotorCommands()` I just solved the equation 
-
-    `tau_x / l = F_1 + F_4 - F_2 - F_3`
-
-    `tau_y / l = F_1 + F_2 - F_3 - F_4`
-
-    `tau_z / kappa = F_1 - F_2 + F_3 - F_4`
-
-    `c_total = F_1 + F_2 + F_3 + F_4`
-
- - `BodyRateControl()` is a simple one that just calculate the acceleration and convert to moment.
 
 If successful, you should see the rotation of the vehicle about roll (omega.x) get controlled to 0 while other rates remain zero.  Note that the vehicle will keep flying off quite quickly, since the angle is not yet being controlled back to 0.  Also note that some overshoot will happen due to motor dynamics!.
 
@@ -217,9 +205,6 @@ Next, you will implement the position, altitude and yaw control for your quad.  
  - implement the code in the function `AltitudeControl()`
  - tune parameters `kpPosZ` and `kpPosZ`
  - tune parameters `kpVelXY` and `kpVelZ`
- - `LateralPositionControl()` is a typically a PD controller. But need to handle maximum acceleration.
- - `AltitudeControl()` calculate PID terms to get `u_1_bar`, and use $$c = (\bar{u}_1-g)/b^z$$  
-    to get world frame acceleration. 
 
 If successful, the quads should be going to their destination points and tracking error should be going down (as shown below). However, one quad remains rotated in yaw.
 

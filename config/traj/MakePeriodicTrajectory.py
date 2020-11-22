@@ -16,6 +16,8 @@ with open('FigureEightFF.txt', 'w') as the_file:
     t=0;
     px = 0;
     py = 0;
+    
+    # change from 0 if you want to add velocity to trajectory
     pz = math.sin(t * 2 * math.pi / period[2] + phase[2]) * radius * amp[2] + center[2];
     while t <= maxtime:
         x = math.sin(t * 2 * math.pi / period[0] + phase[0]) * radius * amp[0] + center[0];
