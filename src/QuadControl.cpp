@@ -151,15 +151,16 @@ V3F QuadControl::RollPitchControl(V3F accelCmd, Quaternion<float> attitude, floa
          
       float target_R13 = CONSTRAIN(accelCmd.x / c_d, -maxTiltAngle, maxTiltAngle);
       float target_R23 = CONSTRAIN(accelCmd.y / c_d, -maxTiltAngle, maxTiltAngle);
-        float bX = target_R13 - R(0, 2);
-        float bY = target_R23 - R(1, 2);
+      float bX = target_R13 - R(0, 2);
+      float bY = target_R23 - R(1, 2);
 
-        pqrCmd.x = kpBank * ((R(1, 0) * bX) - (R(0, 0) * bY)) / R(2, 2);
-        pqrCmd.y = kpBank * ((R(1, 1) * bX) - (R(0, 1) * bY)) / R(2, 2);
+      pqrCmd.x = kpBank * ((R(1, 0) * bX) - (R(0, 0) * bY)) / R(2, 2);
+      pqrCmd.y = kpBank * ((R(1, 1) * bX) - (R(0, 1) * bY)) / R(2, 2);
     }
-    else {
-        pqrCmd.x = 0;
-        pqrCmd.y = 0;
+  else 
+    {
+      pqrCmd.x = 0;
+      pqrCmd.y = 0;
     }
   pqrCmd.z = 0.0;
   /////////////////////////////// END STUDENT CODE ////////////////////////////
@@ -253,20 +254,21 @@ V3F QuadControl::LateralPositionControl(V3F posCmd, V3F velCmd, V3F pos, V3F vel
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
   V3F capVelCmd;
-  if ( velCmd.mag() > maxSpeedXY ) {
-    capVelCmd = velCmd.norm() * maxSpeedXY;
-  }
-  else {
-    capVelCmd = velCmd;
-  }
+  if ( velCmd.mag() > maxSpeedXY ) 
+    {
+      capVelCmd = velCmd.norm() * maxSpeedXY;
+    }
+  else 
+    {
+      capVelCmd = velCmd;
+    }
   
   accelCmd = kpPosXY * ( posCmd - pos ) + kpVelXY * ( capVelCmd - vel ) + accelCmd;
   
-  if ( accelCmd.mag() > maxAccelXY ) {
-    accelCmd = accelCmd.norm() * maxAccelXY;
-  }
-
-
+  if ( accelCmd.mag() > maxAccelXY ) 
+    {
+      accelCmd = accelCmd.norm() * maxAccelXY;
+    }
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
   return accelCmd;

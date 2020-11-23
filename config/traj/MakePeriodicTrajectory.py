@@ -29,9 +29,9 @@ with open('FigureEightFF.txt', 'w') as the_file:
         vz = 0;
         ######## BEGIN STUDENT CODE
         
-        vx = 1.5 * (x - px) / timestep;
-        vy = 1.5 * (y - py) / timestep;
-        vz = 1.5 * (z - pz) / timestep;
+        vx = 1.0 * (x - px) / timestep;
+        vy = 1.0 * (y - py) / timestep;
+        vz = 1.0 * (z - pz) / timestep;
         px = x;
         py = y;
         pz = z;
