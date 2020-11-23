@@ -13,15 +13,17 @@ First you need to run the simulator.
 
 ### Then in `scenario 1`:
 
-I change the `QuadControlParams.Mass * 9.81 / 4` to `QuadControlParams.Mass * 9.81 / 5` in `QuadControlParams.txt`.
+The quad is falling straight down because the mass is not match the actual mass, I change the `Mass` from `0.4` to `0.5` in `QuadControlParams.txt`, and perform better as below.
 
+<p align="center">
+<img src="animations/scenario1.gif" width="500"/>
+</p>
 
 ### Body rate and roll/pitch control (scenario 2) ###
 
 1. Implement body rate control
 
- - Tune `kpPQR` in `QuadControlParams.txt` to get the vehicle to stop spinning quickly but not overshoot
- - In `GenerateMotorCommands()` I just solved the equation 
+ - In `GenerateMotorCommands()` I just solved the equation:
 
     `tau_x / l = F_1 + F_4 - F_2 - F_3`
 
@@ -30,18 +32,32 @@ I change the `QuadControlParams.Mass * 9.81 / 4` to `QuadControlParams.Mass * 9.
     `tau_z / kappa = F_1 - F_2 + F_3 - F_4`
 
     `c_total = F_1 + F_2 + F_3 + F_4`
+    to get F_1 - F_4, these are the command thrusts to each rotor.
 
- - `BodyRateControl()` is a simple one that just calculate the acceleration and convert to moment.
+ - `BodyRateControl()` is a simple one that just calculate the acceleration and convert to moment by one line code: `V3F(Ixx, Iyy, Izz) * kpPQR * (pqrCmd - pqr);`,
+    `V3F(Ixx, Iyy, Izz)` is the moments of inertia of each direction.
+ - Tune `kpPQR` in `QuadControlParams.txt` to get the vehicle to stop spinning quickly but not overshoot
+ - After tuning the drone can stop rotation very quickly but the angle is not yet being controlled back to 0 since there is no roll-pitch control to the vehicle.
+
+<p align="center">
+<img src="animations/scenario_2_1.png" width="500"/>
+</p>
 
 2. Implement roll / pitch control
 
- - This function need a little tricky, it need to get `target_R13` and `target_R23` and then solve this one:
+ - This function need a little tricky, it need to get `target_R13` and `target_R23` by doing like this `float target_R13 = CONSTRAIN(accelCmd.x / c_d, -maxTiltAngle, maxTiltAngle);`, the `CONSTRAIN` is something like `np.crop()` in python.
+ and then solve this equations:
     
     $$
     \begin{pmatrix} p_c \\ q_c \\ \end{pmatrix}  = \frac{1}{R_{33}}\begin{pmatrix} R_{21} & -R_{11} \\ R_{22} & -R_{12} \end{pmatrix} \times \begin{pmatrix} \dot{b}^x_c \\ \dot{b}^y_c  \end{pmatrix} 
     $$
+ - Tune `kpBank` in `QuadControlParams.txt` and should see the vehicle angle (Roll) get controlled to 0.
 
-    
+<p align="center">
+<img src="animations/scenario_2_2.png" width="500"/>
+</p>
+
+
 ### Position/velocity and yaw angle control (scenario 3) ###
 
  - `LateralPositionControl()` is a typically a PD controller. But need to handle maximum acceleration.

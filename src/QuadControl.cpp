@@ -13,6 +13,7 @@
 #ifdef __PX4_NUTTX
 #include <systemlib/param/param.h>
 #endif
+#define USE_MY_VERSION 0
 
 void QuadControl::Init()
 {
@@ -111,12 +112,7 @@ V3F QuadControl::BodyRateControl(V3F pqrCmd, V3F pqr)
   V3F momentCmd;
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
-  // V3F u_bar = kpPQR * (pqrCmd - pqr);
-  V3F I;
-  I.x = Ixx;
-  I.y = Iyy;
-  I.z = Izz;
-  momentCmd = I * kpPQR * (pqrCmd - pqr);
+  momentCmd = V3F(Ixx, Iyy, Izz) * kpPQR * (pqrCmd - pqr);
   
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
@@ -146,6 +142,8 @@ V3F QuadControl::RollPitchControl(V3F accelCmd, Quaternion<float> attitude, floa
   Mat3x3F R = attitude.RotationMatrix_IwrtB();
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
+  float target_R13 = 0.0;
+  float target_R23 = 0.0;
 
   if (collThrustCmd > 0)
     {
@@ -153,19 +151,17 @@ V3F QuadControl::RollPitchControl(V3F accelCmd, Quaternion<float> attitude, floa
          
       float target_R13 = CONSTRAIN(accelCmd.x / c_d, -maxTiltAngle, maxTiltAngle);
       float target_R23 = CONSTRAIN(accelCmd.y / c_d, -maxTiltAngle, maxTiltAngle);
-      pqrCmd.x = (1 / R(2, 2)) * (R(1, 0) * kpBank * (target_R13 - R(0, 2)) -
-      				  R(0, 0) * kpBank * (target_R23 - R(1, 2)));
+        float bX = target_R13 - R(0, 2);
+        float bY = target_R23 - R(1, 2);
 
-      pqrCmd.y = (1 / R(2, 2)) * (R(1, 1) * kpBank * (target_R13 - R(0, 2)) -
-				  R(0, 1) * kpBank * (target_R23 - R(1, 2)));
+        pqrCmd.x = kpBank * ((R(1, 0) * bX) - (R(0, 0) * bY)) / R(2, 2);
+        pqrCmd.y = kpBank * ((R(1, 1) * bX) - (R(0, 1) * bY)) / R(2, 2);
     }
-  else
-    {
-      pqrCmd.x = 0.0;
-      pqrCmd.y = 0.0;
+    else {
+        pqrCmd.x = 0;
+        pqrCmd.y = 0;
     }
-  
-  pqrCmd.z = 0;
+  pqrCmd.z = 0.0;
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
   return pqrCmd;
@@ -195,21 +191,31 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
   float thrust = 0;
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
+#if USE_MY_VERSION
+
   float z_err = posZCmd - posZ;
-  float z_err_dot = velZCmd - velZ;
   integratedAltitudeError += z_err * dt;
-  float b_z = R(2, 2);
   
   float p_term = kpPosZ * z_err;
-  float d_term = kpVelZ * z_err_dot;
+  float d_term = kpVelZ * (velZCmd - velZ);
   float i_term = KiPosZ * integratedAltitudeError;
   
   float u_1_bar = p_term + d_term + i_term + accelZCmd;
-  float c = (u_1_bar - CONST_GRAVITY) / b_z;
+  float c = (u_1_bar - CONST_GRAVITY) / R(2, 2);
   c = CONSTRAIN(c, -maxDescentRate / dt, maxAscentRate / dt);
-
   thrust = -c * mass;
 
+#else
+
+  float zErr = posZCmd - posZ;
+  integratedAltitudeError += zErr * dt;
+
+  float velZRef = velZCmd + (kpPosZ * zErr) + (KiPosZ * integratedAltitudeError);
+  velZRef = -CONSTRAIN(-velZRef, -maxDescentRate, maxAscentRate);
+  float accelCmd = accelZCmd + (kpVelZ * (velZRef - velZ));
+  thrust = mass * (CONST_GRAVITY - (accelCmd / R(2, 2))); // Is this match the equation? 𝑐=(𝑢¯1−𝑔)/𝑏𝑧
+
+#endif
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
   
@@ -295,7 +301,7 @@ float QuadControl::YawControl(float yawCmd, float yaw)
     {
       err -= 2 * F_PI;
     }
-  if (err < -F_PI)
+  if (err <= -F_PI)
     {
       err += 2 * F_PI;
     }
